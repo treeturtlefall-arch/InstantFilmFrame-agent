@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "instant-film-agent"
-version = "0.1.0"
+dynamic = ["version"]
 description = "AI-agent friendly authentic instant film frame & emulation CLI over InstantFilmFrame engine"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -40,3 +40,6 @@ instant_film_agent = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "instant_film_agent.__version__"}

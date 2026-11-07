@@ -17,8 +17,6 @@ from instant_film_agent.engine import ENGINE_DIR, engine_file_sha256
 from instant_film_agent.presets import load_favorites, resolve_preset
 from instant_film_agent.runner import apply
 
-EXIF_IMAGE = Path(__file__).resolve().parent / "data" / "DSC00004.JPG"
-
 
 @pytest.fixture(autouse=True)
 def isolated_user_config(tmp_path, monkeypatch):
@@ -47,7 +45,7 @@ def test_engine_manifest_matches_normalized_hashes():
 
 
 def test_packaged_favorites_serve_aliases_without_repo_file(isolated_user_config, monkeypatch):
-    """リポジトリ直下の favorites.json が無い (pip インストール後) 状況を再現する。"""
+    """パッケージ同梱の data/favorites.json から alias が読めることを確認する。"""
     monkeypatch.setattr(presets, "REPO_FAVORITES", isolated_user_config / "no_such_favorites.json")
     _, aliases, extra = load_favorites()
     assert aliases, "パッケージ同梱の favorites.json から alias が読めていません"
@@ -68,21 +66,21 @@ def test_vintage_alias_is_not_silently_sx70():
     assert resolve_preset("vintage").slug == "aged-nostalgia-antique-memory"
 
 
-def test_default_apply_uses_favorites_date_photo(tmp_path):
-    if not EXIF_IMAGE.is_file():
+def test_default_apply_uses_favorites_date_photo(exif_test_image: Path, tmp_path: Path):
+    if not exif_test_image.is_file():
         pytest.skip("EXIF テスト画像がありません")
     out = tmp_path / "default_date.jpg"
-    res = apply(EXIF_IMAGE, output_path=out)
+    res = apply(exif_test_image, output_path=out)
     assert res["ok"] is True
     assert res["date_source"].startswith("photo_")
     assert res["date_resolved"] == "'03 10 02"
 
 
-def test_explicit_preset_keeps_preset_default_date(tmp_path):
+def test_explicit_preset_keeps_preset_default_date(exif_test_image: Path, tmp_path: Path):
     """favorites の date は「お気に入り呼び出し」だけの既定。明示プリセットは従来どおり。"""
-    if not EXIF_IMAGE.is_file():
+    if not exif_test_image.is_file():
         pytest.skip("EXIF テスト画像がありません")
     out = tmp_path / "explicit_preset_date.jpg"
-    res = apply(EXIF_IMAGE, output_path=out, preset="polaroid-600")
+    res = apply(exif_test_image, output_path=out, preset="polaroid-600")
     assert res["ok"] is True
     assert res["date_source"] == "preset_default"

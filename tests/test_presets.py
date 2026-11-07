@@ -1,6 +1,7 @@
 import pytest
 from instant_film_agent.errors import AgentError
 from instant_film_agent.presets import (
+    create_preset,
     get_builtin_presets,
     list_all_presets,
     load_favorites,
@@ -45,3 +46,20 @@ def test_resolve_not_found():
     assert err.code == "preset_not_found"
     assert "candidates" in err.extra
     assert len(err.extra["candidates"]) > 0
+
+
+def test_create_and_resolve_user_preset(tmp_path, monkeypatch):
+    monkeypatch.setenv("INSTANT_FILM_AGENT_CONFIG_DIR", str(tmp_path))
+    custom_cfg = {
+        "frame_format": "Square (Polaroid)",
+        "emulation_strength": 99,
+        "film_tone": "Warm Amber (70s Vintage)",
+    }
+    p = create_preset("My Custom Retro", custom_cfg)
+    assert p.is_file()
+    assert p.name == "my-custom-retro.json"
+
+    resolved = resolve_preset("my-custom-retro")
+    assert resolved.slug == "my-custom-retro"
+    assert resolved.source == "user"
+    assert resolved.config_dict["emulation_strength"] == 99

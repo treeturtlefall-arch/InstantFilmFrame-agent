@@ -13,21 +13,14 @@ from .capabilities import build_capabilities, human_summary
 from .engine import ENGINE_DIR, FONTS_DIR, engine_file_sha256, load as load_engine
 from .errors import (
     EXIT_ENGINE,
-    EXIT_INPUT,
     EXIT_OK,
-    EXIT_OUTPUT_EXISTS,
     EXIT_USAGE,
     AgentError,
 )
 from .presets import (
-    create_preset,
-    get_builtin_presets,
     list_all_presets,
-    load_favorites,
     resolve_preset,
     set_user_favorite,
-    user_config_dir,
-    user_favorites_file,
 )
 from .runner import apply as run_apply, batch as run_batch
 
@@ -68,36 +61,44 @@ def _wants_json(args: argparse.Namespace) -> bool:
     return bool(getattr(args, "json", False))
 
 
+def _extract_common_options(args: argparse.Namespace) -> Dict[str, Any]:
+    """apply / batch 共通のオプション引数を辞書形式で抽出する。"""
+    return {
+        "preset": args.preset,
+        "frame_format": args.format,
+        "fit_mode": args.fit,
+        "crop_position": args.crop_pos,
+        "pan_x": args.pan_x,
+        "pan_y": args.pan_y,
+        "film_tone": args.tone,
+        "emulation_strength": args.emulation,
+        "paper_tone": args.paper,
+        "paper_texture": args.paper_texture,
+        "caption": args.caption,
+        "date": args.date,
+        "at": args.at,
+        "handwriting_style": args.style,
+        "font_choice": args.font,
+        "ink_color": args.ink,
+        "layout_mode": args.layout,
+        "font_scale": args.scale,
+        "handwriting_wobble": args.wobble,
+        "seed": args.seed,
+        "bbox": args.bbox,
+        "focus_point": args.focus_point,
+        "overwrite": args.overwrite,
+        "save_masks": args.save_masks,
+    }
+
+
 def cmd_apply(args: argparse.Namespace) -> int:
     as_json = _wants_json(args)
+    common_opts = _extract_common_options(args)
     try:
         report = run_apply(
             input_path=args.input,
             output_path=args.output,
-            preset=args.preset,
-            frame_format=args.format,
-            fit_mode=args.fit,
-            crop_position=args.crop_pos,
-            pan_x=args.pan_x,
-            pan_y=args.pan_y,
-            film_tone=args.tone,
-            emulation_strength=args.emulation,
-            paper_tone=args.paper,
-            paper_texture=args.paper_texture,
-            caption=args.caption,
-            date=args.date,
-            at=args.at,
-            handwriting_style=args.style,
-            font_choice=args.font,
-            ink_color=args.ink,
-            layout_mode=args.layout,
-            font_scale=args.scale,
-            handwriting_wobble=args.wobble,
-            seed=args.seed,
-            bbox=args.bbox,
-            focus_point=args.focus_point,
-            overwrite=args.overwrite,
-            save_masks=args.save_masks,
+            **common_opts,
         )
     except AgentError as err:
         return _fail(err, as_json)
@@ -126,35 +127,13 @@ def cmd_apply(args: argparse.Namespace) -> int:
 
 def cmd_batch(args: argparse.Namespace) -> int:
     as_json = _wants_json(args)
+    common_opts = _extract_common_options(args)
     try:
         report = run_batch(
             input_dir=args.input_dir,
             output_dir=args.output,
             recursive=args.recursive,
-            preset=args.preset,
-            frame_format=args.format,
-            fit_mode=args.fit,
-            crop_position=args.crop_pos,
-            pan_x=args.pan_x,
-            pan_y=args.pan_y,
-            film_tone=args.tone,
-            emulation_strength=args.emulation,
-            paper_tone=args.paper,
-            paper_texture=args.paper_texture,
-            caption=args.caption,
-            date=args.date,
-            at=args.at,
-            handwriting_style=args.style,
-            font_choice=args.font,
-            ink_color=args.ink,
-            layout_mode=args.layout,
-            font_scale=args.scale,
-            handwriting_wobble=args.wobble,
-            seed=args.seed,
-            bbox=args.bbox,
-            focus_point=args.focus_point,
-            overwrite=args.overwrite,
-            save_masks=args.save_masks,
+            **common_opts,
         )
     except AgentError as err:
         return _fail(err, as_json)
@@ -327,7 +306,6 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     # 5. フォントの存在
     instant_config, _ = load_engine()
     font_missing = []
-    # 登録されているフォントファイルをチェック
     all_fonts = set(instant_config.HANDWRITING_FONTS.values())
 
     for fn in sorted(all_fonts):
@@ -388,56 +366,56 @@ def _add_common_options(p: argparse.ArgumentParser) -> None:
     p.add_argument("--focus-point", help="被写体注視点 'cx,cy' (0.0〜1.0)")
     p.add_argument("--save-masks", action="store_true", help="写真窓およびカード外枠のマスク画像をPNG保存する")
     p.add_argument("--overwrite", action="store_true", help="出力ファイルが既に存在する場合に上書きする")
-    p.add_argument("--json", action="store_true", help="機械可読なJSON形式で出力する")
 
 
 def build_parser() -> argparse.ArgumentParser:
+    json_parent = argparse.ArgumentParser(add_help=False)
+    json_parent.add_argument(
+        "--json",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="機械可読なJSON形式で出力する",
+    )
+
     parser = argparse.ArgumentParser(
         prog="instant-film-agent",
         description="インスタント写真フレーム＆現像エミュレーション AI エージェント CLI",
+        parents=[json_parent],
     )
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {__version__}")
-    parser.add_argument("--json", action="store_true", help="機械可読なJSON形式で出力する")
 
     sub = parser.add_subparsers(dest="subcommand", required=False)
 
     # 1. apply
-    p_apply = sub.add_parser("apply", help="単一画像にインスタント写真加工を適用する")
+    p_apply = sub.add_parser("apply", parents=[json_parent], help="単一画像にインスタント写真加工を適用する")
     p_apply.add_argument("input", help="入力画像ファイルのパス")
     p_apply.add_argument("-o", "--output", help="出力先画像ファイルのパス")
     _add_common_options(p_apply)
 
     # 2. batch
-    p_batch = sub.add_parser("batch", help="ディレクトリ内の画像を一括処理する")
+    p_batch = sub.add_parser("batch", parents=[json_parent], help="ディレクトリ内の画像を一括処理する")
     p_batch.add_argument("input_dir", help="対象ディレクトリ")
     p_batch.add_argument("-o", "--output", help="出力ディレクトリ")
     p_batch.add_argument("-r", "--recursive", action="store_true", help="再帰的に探索")
     _add_common_options(p_batch)
 
     # 3. presets
-    p_presets = sub.add_parser("presets", help="プリセット一覧または詳細を表示する")
-    p_presets.add_argument("--json", action="store_true", help="JSON出力")
+    p_presets = sub.add_parser("presets", parents=[json_parent], help="プリセット一覧または詳細を表示する")
     sub_presets = p_presets.add_subparsers(dest="presets_action", required=False)
 
-    p_p_list = sub_presets.add_parser("list", help="プリセット一覧")
-    p_p_list.add_argument("--json", action="store_true", help="JSON出力")
-
-    p_p_show = sub_presets.add_parser("show", help="プリセット詳細")
+    sub_presets.add_parser("list", parents=[json_parent], help="プリセット一覧")
+    p_p_show = sub_presets.add_parser("show", parents=[json_parent], help="プリセット詳細")
     p_p_show.add_argument("name", help="プリセット名またはエイリアス")
-    p_p_show.add_argument("--json", action="store_true", help="JSON出力")
 
     # 4. favorite
-    p_fav = sub.add_parser("favorite", help="現在のお気に入りを表示または新しいお気に入りを設定する")
+    p_fav = sub.add_parser("favorite", parents=[json_parent], help="現在のお気に入りを表示または新しいお気に入りを設定する")
     p_fav.add_argument("name", nargs="?", help="新しくお気に入りに設定するプリセット名")
-    p_fav.add_argument("--json", action="store_true", help="JSON出力")
 
     # 5. capabilities
-    p_cap = sub.add_parser("capabilities", help="対応機能・パラメータ一覧をJSON出力する")
-    p_cap.add_argument("--json", action="store_true", help="JSON出力")
+    sub.add_parser("capabilities", parents=[json_parent], help="対応機能・パラメータ一覧をJSON出力する")
 
     # 6. doctor
-    p_doc = sub.add_parser("doctor", help="動作環境および同梱素材の整合性を診断する")
-    p_doc.add_argument("--json", action="store_true", help="JSON出力")
+    sub.add_parser("doctor", parents=[json_parent], help="動作環境および同梱素材の整合性を診断する")
 
     return parser
 

@@ -43,12 +43,24 @@ def test_batch_processing(tmp_path: Path):
     in_dir.mkdir()
     out_dir = tmp_path / "batch_out"
 
+    # 1. 通常の入力画像
     for i in range(2):
         img = Image.new("RGB", (300, 300), color=(i * 50, 100, 150))
         img.save(in_dir / f"img_{i}.jpg")
 
+    # 2. 'instant' が名前に含まれるが生成物ではない画像 (処理対象になるべき)
+    instant_camera_img = in_dir / "instant_camera.jpg"
+    Image.new("RGB", (300, 300), color=(10, 20, 30)).save(instant_camera_img)
+
+    # 3. 以前生成されたアーティファクト (スキップされるべき)
+    old_artifact = in_dir / "old_instant.jpg"
+    old_mask = in_dir / "old_instant_window_mask.png"
+    Image.new("RGB", (300, 300), color=(0, 0, 0)).save(old_artifact)
+    Image.new("RGB", (300, 300), color=(0, 0, 0)).save(old_mask)
+
     report = batch(input_dir=in_dir, output_dir=out_dir)
     assert report["ok"] is True
-    assert report["total"] == 2
-    assert report["success"] == 2
+    # img_0, img_1, instant_camera の計3件が処理対象
+    assert report["total"] == 3
+    assert report["success"] == 3
     assert report["failed"] == 0

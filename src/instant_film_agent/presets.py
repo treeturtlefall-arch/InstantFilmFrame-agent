@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -13,7 +13,7 @@ from .errors import EXIT_USAGE, AgentError
 PACKAGE_DIR = Path(__file__).resolve().parent
 DATA_DIR = PACKAGE_DIR / "data"
 REPO_PRESETS_DIR = PACKAGE_DIR.parents[1] / "presets"
-REPO_FAVORITES = PACKAGE_DIR.parents[1] / "favorites.json"
+REPO_FAVORITES = DATA_DIR / "favorites.json"
 
 FAVORITE_WORDS = ("favorite", "お気に入り", "いつもの", "default")
 

@@ -17,7 +17,7 @@
 
 <br />
 
-[Why instant-film-agent?](#why-instant-film-agent) • [Key Features](#key-features) • [Preset Gallery](#preset-gallery) • [Agent Integration](#agent-integration-guide) • [CLI Reference](#cli-reference) • [FAQ](#faq)
+[Why instant-film-agent?](#why-instant-film-agent) • [Key Features](#key-features) • [Preset Gallery](#preset-gallery) • [Agent Integration](#agent-integration-guide) • [CLI Reference](#cli-reference)
 
 <br />
 

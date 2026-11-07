@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -14,19 +15,36 @@ from .engine import load as load_engine
 from .errors import (
     EXIT_ENGINE,
     EXIT_INPUT,
-    EXIT_OK,
     EXIT_OUTPUT_EXISTS,
     EXIT_USAGE,
     AgentError,
 )
 from .exif import get_photo_datetime
-from .presets import FAVORITE_WORDS, ResolvedPreset, load_favorites, resolve_preset
+from .presets import FAVORITE_WORDS, load_favorites, resolve_preset
 
 DATA_UPSTREAM = Path(__file__).resolve().parent / "data" / "upstream.json"
 
 SUPPORTED_EXTENSIONS = {
     ".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tif"
 }
+
+_GENERATED_STEM_PATTERN = re.compile(r".*_instant(?:_\d+)?$", re.IGNORECASE)
+
+
+def _is_generated_artifact(path: Path, out_dir: Optional[Path] = None) -> bool:
+    """以前の処理で生成された画像やマスクかを判定する。"""
+    if out_dir is not None:
+        try:
+            path.resolve().relative_to(out_dir.resolve())
+            return True
+        except ValueError:
+            pass
+
+    name_lower = path.name.lower()
+    if name_lower.endswith("_window_mask.png") or name_lower.endswith("_card_mask.png"):
+        return True
+
+    return bool(_GENERATED_STEM_PATTERN.match(path.stem))
 
 
 def _engine_info() -> Dict[str, Any]:
@@ -109,7 +127,7 @@ def resolve_date_input(
     date_arg: Optional[str],
     at_arg: Optional[str],
     preset_cfg: Dict[str, Any],
-    input_path: Path,
+    image_or_path: Union[Image.Image, Path],
 ) -> Tuple[str, str]:
     """
     日付文字列と検出ソースを解決する。
@@ -124,7 +142,7 @@ def resolve_date_input(
     raw_date = date_arg.strip() if date_arg else None
 
     if raw_date and raw_date.lower() in ("photo", "exif", "camera"):
-        dt, source = get_photo_datetime(input_path)
+        dt, source = get_photo_datetime(image_or_path)
         if dt:
             return dt.strftime("'%y %m %d"), f"photo_{source}"
         now = datetime.now()
@@ -147,7 +165,7 @@ def resolve_date_input(
     p_lower = str(preset_date).strip().lower()
 
     if p_lower in ("photo", "exif"):
-        dt, source = get_photo_datetime(input_path)
+        dt, source = get_photo_datetime(image_or_path)
         if dt:
             return dt.strftime("'%y %m %d"), f"photo_{source}"
         return "today", "fallback_today"
@@ -233,7 +251,6 @@ def apply(
 
     # 日付の初期設定: お気に入り呼び出し (プリセット未指定 / favorite 系ワード) で
     # 日付指定が無い場合、favorites.json の "date" を既定として使う。
-    # 明示プリセット指定時は従来どおりプリセット既定 (today) のままにする。
     effective_date = date
     if effective_date is None and at is None and (
         not preset or str(preset).strip().lower() in FAVORITE_WORDS
@@ -243,56 +260,15 @@ def apply(
         if fav_date:
             effective_date = str(fav_date)
 
-    # 日付解決
-    date_str, date_source = resolve_date_input(effective_date, at, cfg_dict, in_p)
-
-    # パラメータの上書き
-    if frame_format is not None:
-        cfg_dict["frame_format"] = frame_format
-    if fit_mode is not None:
-        cfg_dict["fit_mode"] = fit_mode
-    if crop_position is not None:
-        cfg_dict["crop_position"] = crop_position
-    if pan_x is not None:
-        cfg_dict["pan_x"] = pan_x
-    if pan_y is not None:
-        cfg_dict["pan_y"] = pan_y
-    if film_tone is not None:
-        cfg_dict["film_tone"] = film_tone
-    if emulation_strength is not None:
-        cfg_dict["emulation_strength"] = int(emulation_strength)
-    if paper_tone is not None:
-        cfg_dict["paper_tone"] = paper_tone
-    if paper_texture is not None:
-        cfg_dict["paper_texture"] = int(paper_texture)
-    if caption is not None:
-        cfg_dict["caption_text"] = caption
-    if handwriting_style is not None:
-        cfg_dict["handwriting_style"] = handwriting_style
-    if font_choice is not None:
-        cfg_dict["font_choice"] = font_choice
-    if ink_color is not None:
-        cfg_dict["ink_color"] = ink_color
-    if layout_mode is not None:
-        cfg_dict["layout_mode"] = layout_mode
-    if font_scale is not None:
-        cfg_dict["font_scale"] = float(font_scale)
-    if handwriting_wobble is not None:
-        cfg_dict["handwriting_wobble"] = int(handwriting_wobble)
-    if seed is not None:
-        cfg_dict["seed"] = int(seed)
-
-    cfg_dict["date_string"] = date_str
-
-    subject_bbox_val = parse_bbox(bbox)
-    focus_point_val = parse_focus_point(focus_point)
-
-    # 画像読み込み & EXIF回転補正
+    # 画像読み込み & EXIF回転補正（1パスで実行し、開いた画像を resolve_date_input にも共有）
     try:
         with Image.open(in_p) as raw_img:
+            # 1. EXIF 日時解決
+            date_str, date_source = resolve_date_input(effective_date, at, cfg_dict, raw_img)
+
+            # 2. 画像デコード & 向き補正
             img_transposed = ImageOps.exif_transpose(raw_img)
             if img_transposed.mode != "RGB":
-                # 透明度がある場合は白背景合成
                 if img_transposed.mode in ("RGBA", "LA") or (img_transposed.mode == "P" and "transparency" in img_transposed.info):
                     bg = Image.new("RGB", img_transposed.size, (255, 255, 255))
                     rgba = img_transposed.convert("RGBA")
@@ -302,8 +278,39 @@ def apply(
                     img_rgb = img_transposed.convert("RGB")
             else:
                 img_rgb = img_transposed.copy()
+    except AgentError:
+        raise
     except Exception as e:
         raise AgentError("image_open_failed", EXIT_INPUT, f"入力画像を開けません: {in_p}: {e}")
+
+    # パラメータの上書き（テーブル駆動で簡潔にマッピング）
+    overrides = {
+        "frame_format": frame_format,
+        "fit_mode": fit_mode,
+        "crop_position": crop_position,
+        "pan_x": pan_x,
+        "pan_y": pan_y,
+        "film_tone": film_tone,
+        "emulation_strength": int(emulation_strength) if emulation_strength is not None else None,
+        "paper_tone": paper_tone,
+        "paper_texture": int(paper_texture) if paper_texture is not None else None,
+        "caption_text": caption,
+        "handwriting_style": handwriting_style,
+        "font_choice": font_choice,
+        "ink_color": ink_color,
+        "layout_mode": layout_mode,
+        "font_scale": float(font_scale) if font_scale is not None else None,
+        "handwriting_wobble": int(handwriting_wobble) if handwriting_wobble is not None else None,
+        "seed": int(seed) if seed is not None else None,
+    }
+    for k, v in overrides.items():
+        if v is not None:
+            cfg_dict[k] = v
+
+    cfg_dict["date_string"] = date_str
+
+    subject_bbox_val = parse_bbox(bbox)
+    focus_point_val = parse_focus_point(focus_point)
 
     # float32 [0.0, 1.0] 配列化
     img_np = np.array(img_rgb, dtype=np.float32) / 255.0
@@ -373,7 +380,6 @@ def apply(
             saved_masks["window_mask"] = str(win_mask_path)
             saved_masks["card_mask"] = str(card_mask_path)
         except Exception as e:
-            # マスク保存失敗は致命的エラーにはしない
             saved_masks["error"] = str(e)
 
     h_in, w_in = img_np.shape[:2]
@@ -422,7 +428,7 @@ def batch(
     pattern = "**/*" if recursive else "*"
     files = [
         p for p in src_dir.glob(pattern)
-        if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS and "instant" not in p.name
+        if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS and not _is_generated_artifact(p, out_d)
     ]
 
     results: List[Dict[str, Any]] = []
