@@ -1,0 +1,25 @@
+{
+  "favorite": "instax-mini",
+  "aliases": {
+    "cheki": "instax-mini",
+    "チェキ": "instax-mini",
+    "mini": "instax-mini",
+    "polaroid": "polaroid-600",
+    "ポラロイド": "polaroid-600",
+    "600": "polaroid-600",
+    "sx70": "polaroid-sx70",
+    "wide": "instax-wide",
+    "ワイド": "instax-wide",
+    "pastel": "pastel-dream",
+    "パステル": "pastel-dream",
+    "kawaii": "pastel-dream",
+    "summer": "vivid-summer",
+    "vivid": "vivid-summer",
+    "bw": "classic-monochrome",
+    "モノクロ": "classic-monochrome",
+    "cinematic": "cinematic-night",
+    "vintage": "aged-nostalgia",
+    "auto": "auto-smart"
+  },
+  "date": "photo"
+}

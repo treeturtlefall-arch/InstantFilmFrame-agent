@@ -1,0 +1,4 @@
+name: instant-film-agent
+description: 実在するインスタント写真（ポラロイド／チェキ等）の物理フレーム質感、0〜100の光学・化学現像エミュレーション、および余白への手書き文字・日時記入を合成する。
+version: 0.1.0
+command: instant-film-agent

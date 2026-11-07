@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "instant-film-agent"
+version = "0.1.0"
+description = "AI-agent friendly authentic instant film frame & emulation CLI over InstantFilmFrame engine"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.20.0",
+    "Pillow>=9.0.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[project.scripts]
+instant-film-agent = "instant_film_agent.cli:main"
+instant-frame = "instant_film_agent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+instant_film_agent = [
+    "data/*.json",
+    "data/presets/*.json",
+]
+"instant_film_agent.engine" = [
+    "*.py",
+    "fonts/*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
