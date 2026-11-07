@@ -36,4 +36,4 @@ esac
 echo "[4/4] doctor で検証します"
 "$BIN_LINK_DIR/instant-film-agent" doctor --json
 
-echo "導入完了。続けてスキル配置を行ってください: bash scripts/install_skill.sh"
+echo "導入完了。続けてスキル配置を行ってください: bash scripts/install_skill.sh muse (Muse) / gemini (Gemini・Antigravity)"

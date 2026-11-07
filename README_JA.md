@@ -189,9 +189,12 @@ pip install -e .
 instant-film-agent doctor --json
 # => {"ok": true, ...} が返れば準備完了
 
-# 3. エージェント用スキルの配置 (Antigravity / Gemini CLI 等)
-powershell -ExecutionPolicy Bypass -File scripts/install_skill.ps1
-# (Linux / Mac の場合: bash scripts/install_skill.sh)
+# 3. エージェント用スキルの配置 — 配置先はキーワードで選べる
+#    muse:   ~/workspace/custom-skills/instant-film-agent (Muse 用)
+#    gemini: ~/.gemini/config/skills/instant-film-agent (Gemini CLI / Antigravity 用、既定)
+#    任意のパスを直接渡すこともでき、環境変数 INSTANT_FILM_SKILL_DEST でも指定できる
+powershell -ExecutionPolicy Bypass -File scripts/install_skill.ps1 muse
+# (Linux / Mac の場合: bash scripts/install_skill.sh muse)
 ```
 
 ---

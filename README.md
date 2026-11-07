@@ -147,9 +147,12 @@ pip install -e .
 # 2. Verify self-diagnostics
 instant-film-agent doctor --json
 
-# 3. Deploy agent skill definition
-powershell -ExecutionPolicy Bypass -File scripts/install_skill.ps1
-# (On Linux / macOS: bash scripts/install_skill.sh)
+# 3. Deploy agent skill definition — pick the target by keyword
+#    Muse:  ~/workspace/custom-skills/instant-film-agent
+#    Gemini CLI / Antigravity: ~/.gemini/config/skills/instant-film-agent (default)
+#    An explicit path also works, as does $INSTANT_FILM_SKILL_DEST.
+powershell -ExecutionPolicy Bypass -File scripts/install_skill.ps1 muse
+# (On Linux / macOS: bash scripts/install_skill.sh muse)
 ```
 
 ---
