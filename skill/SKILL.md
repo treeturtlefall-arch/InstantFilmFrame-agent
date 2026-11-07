@@ -11,7 +11,12 @@ description: 画像に実在するインスタント写真（ポラロイド／�
 
 - コマンド: `instant-film-agent`（または `python -m instant_film_agent`）
 - 導入確認: `instant-film-agent doctor` が全項目 `[OK]` であること
-- プリセット: `favorite`（お気に入り）が既定。実体は `favorites.json` が決める（初期値は `instax-mini`：縦長チェキ実寸、白枠、ハイキートーン、日常日記ペン）。
+- プリセット: `favorite`（お気に入り）が既定。実体は `data/favorites.json` が決める（初期値は `instax-mini-vertical-snap`：縦長チェキ実寸、白枠、ハイキートーン、日常日記ペン、日付は EXIF 優先）。ユーザー設定（`~/.config/instant-film-agent/favorites.json`）があればそちらが優先される。
+
+## 未導入・コマンドが見つからない場合
+
+- `instant-film-agent` が無い、または `doctor` が通らない場合は、まず導入を行う。リポジトリ（https://github.com/treeturtlefall-arch/InstantFilmFrame-agent）をクローン済みなら `bash scripts/install_agent.sh` を実行し、続けて `bash scripts/install_skill.sh muse` でこのスキルを配置し直す。
+- 導入後に再度 `instant-film-agent doctor --json` を実行し、`"ok": true` を確認してから本手順に戻ること。
 
 ## トリガー語（こんな指示があったら発動）
 
@@ -22,6 +27,14 @@ description: 画像に実在するインスタント写真（ポラロイド／�
 - 「写真の余白に日付を入れて」「撮影日を手書きで入れて」
 - 「エモいインスタント写真にして」「ヴィンテージポラロイドにして」
 - 画像を生成・加工した直後に「チェキにして」「ポラロイドにして」と言われた場合も対象
+
+## 類似ツールとの振り分け
+
+| 依頼の芯 | 使う道具 |
+|---|---|
+| インスタント写真の枠＋現像＋余白の手書き | **instant-film-agent（これ）** |
+| フィルムの日付スタンプだけを焼きたい | film-date-agent |
+| ビデオ風の REC 枠・ファインダー表示を付けたい | rec-frame-agent |
 
 ## 実行手順
 
@@ -45,12 +58,13 @@ description: 画像に実在するインスタント写真（ポラロイド／�
      - 「古い」「アンティーク」: `-p aged-nostalgia`（経年劣化用紙、色褪せ、アンティーク万年筆）
      - 「比率を変えないで」「トリミングなしで」: `-p keep-aspect-clean`
      - 「画像の縦横に合わせて自動で」: `-p auto-smart`
+   - 複数枚やフォルダごと頼まれた場合は `instant-film-agent batch <入力フォルダ> -o <出力フォルダ> --json` を使う。
 
 3. **余白テキスト・日付オプションの組み立て**:
    - **キャプションの記入**:
      - 「"〇〇" と書いて」「タイトルを入れて」→ `-c "キャプション文字列"`
    - **日付の選択**:
-     - **指定がない場合（既定）**: プリセットの設定に従う。
+     - **指定がない場合（既定）**: お気に入り呼び出し（プリセット未指定）では `favorites.json` の `date` 設定（初期値は `photo`）に従い、写真の EXIF 撮影日時が使われる（EXIF が無ければ今日の日付）。明示プリセットを指定した場合は、各プリセット既定の日付（今日）になる。
      - **写真の撮影日時を使いたい場合**: 「撮影日時で」「EXIFの日付で」→ `-d photo`
      - **今日の日付にしたい場合**: 「今日の日付で」→ `-d today`
      - **昔のランダム日付にしたい場合**: 「昔の適当な日付で」→ `-d random`
@@ -74,8 +88,9 @@ description: 画像に実在するインスタント写真（ポラロイド／�
      - 「写真窓のマスクも欲しい」「切り抜きマスクも出して」→ `--save-masks`
 
 5. **結果の報告**:
-   - `--json` の出力をパースし、`ok` が true であれば、`output` に格納された画像パスをユーザーに提示・報告する。
-   - 適用した構図規格（`frame_format`）、プリセット（`preset_resolved`）、および印字したテキスト（`rendered_text`）を一言添える。
+   - `--json` の出力をパースし、`ok` が true であれば、`output` の画像を**必ず添付してユーザーに見せる**。パスの文字列だけの報告で終わらない。
+   - 渡す前に出力画像を一度開いて、フレームの崩れ・文字切れが無いか目視で確認する。
+   - 適用した構図規格（`frame_format`）、プリセット（`preset_resolved`）、印字したテキスト（`rendered_text`）と日付の出所（`date_source`）を一言添える。
    - 例: *「縦長チェキ風（instax mini）で、余白に手書きキャプション『Summer Vacation | '03 10 02』を記入して仕上げました。」*
 
 6. **エラー時の対応**:

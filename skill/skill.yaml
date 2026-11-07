@@ -1,5 +1,5 @@
 name: "instant_film_agent"
 title: "Instant Film Agent"
-description: "Composite a real instant-film frame (instax mini / Polaroid 600 / SX-70 / instax WIDE), 0-100 chemical emulation, and handwritten margin caption/date onto an image; use when asked to make a photo cheki-style, Polaroid-style, or instant-film style."
+description: "Composite a real instant-film frame (instax mini / Polaroid 600 / SX-70 / instax WIDE), 0-100 chemical emulation, and handwritten margin caption/date onto an image; use when asked to make a photo cheki-style (チェキ風), Polaroid-style (ポラロイド風), or instant-film style (インスタント写真風)."
 category: "Work and knowledge"
 include_in_prompt: true
