@@ -231,8 +231,20 @@ def apply(
     resolved = resolve_preset(preset)
     cfg_dict = dict(resolved.config_dict)
 
+    # 日付の初期設定: お気に入り呼び出し (プリセット未指定 / favorite 系ワード) で
+    # 日付指定が無い場合、favorites.json の "date" を既定として使う。
+    # 明示プリセット指定時は従来どおりプリセット既定 (today) のままにする。
+    effective_date = date
+    if effective_date is None and at is None and (
+        not preset or str(preset).strip().lower() in FAVORITE_WORDS
+    ):
+        _, _, favorites_extra = load_favorites()
+        fav_date = favorites_extra.get("date")
+        if fav_date:
+            effective_date = str(fav_date)
+
     # 日付解決
-    date_str, date_source = resolve_date_input(date, at, cfg_dict, in_p)
+    date_str, date_source = resolve_date_input(effective_date, at, cfg_dict, in_p)
 
     # パラメータの上書き
     if frame_format is not None:

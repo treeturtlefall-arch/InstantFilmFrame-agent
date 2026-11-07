@@ -33,13 +33,20 @@ def load():
     return instant_config, instant_frame
 
 
+# 改行コードの差 (CRLF/LF) をハッシュに持ち込まないテキストファイルの拡張子。
+# エンジンの実体 (.py) だけでなく、同梱テキスト (LICENSE 等の .txt) も対象にする。
+# Windows (CRLF チェックアウト) と Linux/macOS (LF) で doctor の結果が
+# 一致しない事故を防ぐため、マニフェスト側のハッシュも LF 正規化後の値で持つ。
+TEXT_SUFFIXES = {".py", ".txt", ".md", ".json"}
+
+
 def engine_file_sha256(path: Path) -> str:
     """エンジン同梱ファイルの SHA-256 を計算する。
-    テキストファイル (.py) の場合は CRLF/LF の差分を排除して正規化する。
+    テキストファイルの場合は CRLF/LF の差分を排除して正規化する。
     """
     if not path.is_file():
         return "missing"
     data = path.read_bytes()
-    if path.suffix == ".py":
+    if path.suffix.lower() in TEXT_SUFFIXES:
         data = data.replace(b"\r\n", b"\n")
     return hashlib.sha256(data).hexdigest()

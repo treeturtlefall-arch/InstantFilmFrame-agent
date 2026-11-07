@@ -13,10 +13,11 @@ ENGINE_FILES = ["instant_frame.py", "instant_config.py"]
 
 
 def sha256(path: Path) -> str:
+    # engine_file_sha256 と同じ改行正規化 (CRLF/LF を同一視する)。
     if not path.is_file():
         return ""
     data = path.read_bytes()
-    if path.suffix == ".py":
+    if path.suffix.lower() in {".py", ".txt", ".md", ".json"}:
         data = data.replace(b"\r\n", b"\n")
     return hashlib.sha256(data).hexdigest()
 

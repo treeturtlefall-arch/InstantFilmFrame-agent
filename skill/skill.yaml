@@ -1,4 +1,5 @@
-name: instant-film-agent
-description: 実在するインスタント写真（ポラロイド／チェキ等）の物理フレーム質感、0〜100の光学・化学現像エミュレーション、および余白への手書き文字・日時記入を合成する。
-version: 0.1.0
-command: instant-film-agent
+name: "instant_film_agent"
+title: "Instant Film Agent"
+description: "Composite a real instant-film frame (instax mini / Polaroid 600 / SX-70 / instax WIDE), 0-100 chemical emulation, and handwritten margin caption/date onto an image; use when asked to make a photo cheki-style, Polaroid-style, or instant-film style."
+category: "Work and knowledge"
+include_in_prompt: true

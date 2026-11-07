@@ -250,9 +250,15 @@ def load_favorites() -> Tuple[str, Dict[str, str], Dict[str, Any]]:
     優先順位: ユーザー設定ファイル (~/.config/.../favorites.json) > リポジトリ同梱 favorites.json > 既定値
     戻り値: (favorite_preset_slug, aliases_dict, extra_options)
     """
+    # 探索順: ユーザー設定 > パッケージ同梱 (data/favorites.json) > リポジトリ同梱。
+    # pip インストール後はリポジトリ直下の favorites.json が存在しないため、
+    # パッケージ内に同梱したコピーを必ず探索に入れる (無いと alias が全滅する)。
     fav_file = user_favorites_file()
     if not fav_file.is_file():
-        fav_file = REPO_FAVORITES
+        for candidate in (DATA_DIR / "favorites.json", REPO_FAVORITES):
+            if candidate.is_file():
+                fav_file = candidate
+                break
 
     default_fav = "instax-mini"
     aliases: Dict[str, str] = {}
